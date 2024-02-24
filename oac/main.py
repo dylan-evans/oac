@@ -48,7 +48,7 @@ def get_arg_parser():
     return parser
 
 
-def main(call_next = None):
+def main(call_next = None, openai_client: Any = None):
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -57,7 +57,7 @@ def main(call_next = None):
     params = get_arg_parser().parse_args()
     options = ChatOption.from_namespace(params)
     if call_next is not None:
-        call_next(ChatSession(options))
+        call_next(ChatSession(option, openai_client))
 
 
 def example(session):
@@ -142,11 +142,11 @@ class SessionTrace:
 
 
 class ChatSession:
-    def __init__(self, options: ChatOption | None=None, openai_args=[], openai_kwargs={}):
+    def __init__(self, options: ChatOption | None = None, openai_client: Any = None):
         self.options: ChatOption = options or ChatOption()
         self._option_stack = []
         self.trace = SessionTrace(datetime.now().strftime("%Y%m%d_%H%M%S"), self.options)
-        self.openai = OpenAI(*openai_args, **openai_kwargs)
+        self.openai = openai_client or OpenAI()
 
     def __enter__(self):
         self._option_stack.append(copy(self.options))
