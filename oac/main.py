@@ -34,7 +34,7 @@ class Mesg:
         self.content = dedent(self.content)
 
 
-def parse_args():
+def get_arg_parser():
     parser = argparse.ArgumentParser(description='')
 
     for field in get_fields(ChatOption):
@@ -45,7 +45,7 @@ def parse_args():
             #type=field.type
         )
 
-    return parser.parse_args()
+    return parser
 
 
 def main(call_next = None):
@@ -54,7 +54,7 @@ def main(call_next = None):
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("openai").setLevel(logging.WARNING)
     LOG.info("starting")
-    params = parse_args()
+    params = get_arg_parser().parse_args()
     options = ChatOption.from_namespace(params)
     if call_next is not None:
         call_next(ChatSession(options))
@@ -78,7 +78,7 @@ def example(session):
 class ChatOption():
 
     @classmethod
-    def from_namespace(cls, arg_ns):
+    def from_namespace(cls, arg_ns: argparse.Namespace):
         options = {f.name: getattr(arg_ns, f.name) for f in get_fields(cls)}
         return cls(**options)
 
