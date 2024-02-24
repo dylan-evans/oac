@@ -48,7 +48,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main(call_next = None):
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -56,12 +56,12 @@ def main():
     LOG.info("starting")
     params = parse_args()
     options = ChatOption.from_namespace(params)
-    example(options)
+    if call_next is not None:
+        call_next(ChatSession(options))
 
 
-def example(options: "ChatOption"):
+def example(session):
     LOG.debug("start example")
-    session = ChatSession(options)
     with session as chat:
         chat.options.temperature = 1.2
         chat.system = "Be a great assistant!"
@@ -225,4 +225,4 @@ class ChatSession:
 
 
 if __name__ == '__main__':
-    main()
+    main(example)
