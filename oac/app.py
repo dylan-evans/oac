@@ -17,7 +17,7 @@ MainFunc = Callable[[ChatSession], None]
 DEFAULT_CONFIG_DIR = Path("~/.config/oac/").expanduser()
 DEFAULT_CONFIG = DEFAULT_CONFIG_DIR / "oaa.yaml"
 OPENAI_OPTIONS = DEFAULT_CONFIG_DIR / "openai-chat-options.yaml"
-DEFAULT_LOG_DIR = Path("~/.cache/oac/").expanduser()
+DEFAULT_LOG_DIR = Path("~/OAC/logs/").expanduser()
 
 
 class ChatApp:
