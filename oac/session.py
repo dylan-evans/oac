@@ -2,24 +2,19 @@ from abc import ABC, abstractmethod
 import argparse
 from datetime import datetime
 from typing import Literal, TypedDict, Optional, Annotated, Any, Generator, TextIO
-from dataclasses import dataclass, asdict, field, fields as get_fields
+from dataclasses import dataclass, asdict, fields as get_fields
 from pathlib import Path
-from contextlib import contextmanager, ContextDecorator
+from contextlib import contextmanager
 import yaml
 import logging
 from textwrap import dedent
 from copy import copy
 
 from openai import OpenAI
-from openai.types.chat.completion_create_params import CompletionCreateParams
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 
-LOG = logging.getLogger("oac.main")
+LOG = logging.getLogger("oac.session")
 
-DEFAULT_CONFIG_DIR = Path("~/.config/oac/").expanduser()
-DEFAULT_CONFIG = DEFAULT_CONFIG_DIR / "oaa.yaml"
-OPENAI_OPTIONS = DEFAULT_CONFIG_DIR / "openai-chat-options.yaml"
-DEFAULT_LOG_DIR = Path("~/.cache/oac/").expanduser()
 
 MesgSourceType = Literal["generated", "provided"]
 
@@ -34,52 +29,12 @@ class Mesg:
         self.content = dedent(self.content)
 
 
-def get_arg_parser():
-    parser = argparse.ArgumentParser(description='')
-
-    for field in get_fields(ChatOption):
-        parser.add_argument(
-            f"--{field.name.replace('_', '-')}",
-            default=field.default,
-            dest=field.name,
-            #type=field.type
-        )
-
-    return parser
-
-
-def main(call_next = None, openai_client: Any = None):
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    logging.getLogger("openai").setLevel(logging.WARNING)
-    LOG.info("starting")
-    params = get_arg_parser().parse_args()
-    options = ChatOption.from_namespace(params)
-    if call_next is not None:
-        call_next(ChatSession(option, openai_client))
-
-
-def example(session):
-    LOG.debug("start example")
-    with session as chat:
-        chat.options.temperature = 1.2
-        chat.system = "Be a great assistant!"
-        chat.assistant = "I will do my best!"
-        chat.user = "I have a question, a little question for you"
-        chat.assistant = "I'm here to help, ask away!"
-        chat.user = "What is the meaning of life?"
-
-    print(session.last)
-    print(session.trace.history)
-
-
 @dataclass
 class ChatOption():
 
     @classmethod
     def from_namespace(cls, arg_ns: argparse.Namespace):
-        options = {f.name: getattr(arg_ns, f.name) for f in get_fields(cls)}
+        options = {f.name: getattr(arg_ns, f.name, f.default) for f in get_fields(cls)}
         return cls(**options)
 
     frequency_penalty: Optional[Annotated[float, range(-2, 2)]] = None
@@ -96,7 +51,7 @@ class ChatOption():
 
 
 class SessionTrace:
-    def __init__(self, session_id: str, options: ChatOption, log_dir: Path = DEFAULT_LOG_DIR):
+    def __init__(self, session_id: str, options: ChatOption, log_dir: Path):
         self.dir = log_dir / session_id
         LOG.info("Writing trace logs to '%s'", str(self.dir))
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -142,10 +97,10 @@ class SessionTrace:
 
 
 class ChatSession:
-    def __init__(self, options: ChatOption | None = None, openai_client: Any = None):
+    def __init__(self, trace: SessionTrace, options: ChatOption | None = None, openai_client: Any = None):
         self.options: ChatOption = options or ChatOption()
         self._option_stack = []
-        self.trace = SessionTrace(datetime.now().strftime("%Y%m%d_%H%M%S"), self.options)
+        self.trace = trace
         self.openai = openai_client or OpenAI()
 
     def __enter__(self):
@@ -222,7 +177,3 @@ class ChatSession:
             return self.trace.history[-1].content
         except IndexError:
             return None
-
-
-if __name__ == '__main__':
-    main(example)
