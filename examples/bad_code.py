@@ -1,4 +1,4 @@
-
+import sys
 
 from oac.app import ChatApp, ChatSession
 
@@ -25,4 +25,4 @@ def chat(sess: ChatSession):
 
 
 if __name__ == '__main__':
-    ChatApp().start(chat)
+    ChatApp(output_stream=sys.stdout).start(chat)

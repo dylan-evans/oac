@@ -25,21 +25,21 @@ class ChatApp:
                  client: Any = None,
                  cli_args: list[str] | None = None,
                  trace_dir: Path | None = None,
-                 trace_name: str | None = None):
+                 trace_name: str | None = None,
+                 output_stream = None):
         self.client = client
         self.trace_dir = trace_dir
         self.trace_name = trace_name
+        self.output_stream = output_stream
         self.cli_args = cli_args or sys.argv[1:]
         self.namespace = Namespace()
         self.setup_logging()
-
 
     def setup_logging(self):
         logging.basicConfig(level=logging.DEBUG)
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("httpcore").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
-
 
     def get_options(self) -> ChatOption:
         return ChatOption.from_namespace(self.namespace)
@@ -48,7 +48,7 @@ class ChatApp:
         options = self.get_options()
         trace = SessionTrace(
             session_id=self.trace_name or datetime.now().strftime("%Y%m%d_%H%M%S"),
-            options=options,
+            options=options,  # TODO: Move logging call to here
             log_dir=self.trace_dir or DEFAULT_LOG_DIR,
         )
         return ChatSession(
@@ -57,10 +57,13 @@ class ChatApp:
             openai_client=self.client
         )
 
-    def start(self, main_func: MainFunc, block: bool = True) -> threading.Thread:
-        thread = threading.Thread(target=main_func, args=[self.create_session()])
+    def start(self, main_func: MainFunc):
+        main_func(self.create_session())
+
+    def start_thread(self, main_func: MainFunc, join: bool = False) -> threading.Thread:
+        thread = threading.Thread(target=self.start, args=[main_func])
         thread.start()
-        if block:
+        if join:
             thread.join()
         return thread
 

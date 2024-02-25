@@ -97,11 +97,12 @@ class SessionTrace:
 
 
 class ChatSession:
-    def __init__(self, trace: SessionTrace, options: ChatOption | None = None, openai_client: Any = None):
+    def __init__(self, trace: SessionTrace, options: ChatOption | None = None, openai_client: Any = None, output_stream = None):
         self.options: ChatOption = options or ChatOption()
         self._option_stack = []
         self.trace = trace
         self.openai = openai_client or OpenAI()
+        self.output_stream = output_stream
 
     def __enter__(self):
         self._option_stack.append(copy(self.options))
@@ -132,8 +133,11 @@ class ChatSession:
 
         with self.trace.stream_mesg("assistant", "generated") as out:
             for chunk in resp:
-                if chunk.choices[0].delta.content is not None:
-                    out.write(chunk.choices[0].delta.content)
+                content = chunk.choices[0].delta.content
+                if content is not None:
+                    out.write(content)
+                    if self.output_stream is not None:
+                        self.output_stream.write(content)
 
                 if chunk.choices[0].finish_reason is not None:
                     print("\nGot finish reason:", chunk.choices[0].finish_reason)
