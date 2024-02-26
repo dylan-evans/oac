@@ -51,8 +51,10 @@ class ChatOption():
 
 
 class SessionTrace:
-    def __init__(self, session_id: str, options: ChatOption, log_dir: Path):
-        self.dir = log_dir / session_id
+    def __init__(self, project: str, session_id: str, options: ChatOption, log_dir: Path):
+        self.project = project
+        self.session_id = session_id
+        self.dir = log_dir / project / session_id
         LOG.info("Writing trace logs to '%s'", str(self.dir))
         self.dir.mkdir(parents=True, exist_ok=True)
         self._index = 0
@@ -97,8 +99,12 @@ class SessionTrace:
 
 
 class ChatSession:
-    def __init__(self, trace: SessionTrace, options: ChatOption | None = None, openai_client: Any = None, output_stream = None):
-        self.options: ChatOption = options or ChatOption()
+    def __init__(self,
+                 options: ChatOption,
+                 trace: SessionTrace,
+                 openai_client: Any = None,
+                 output_stream = None):
+        self.options = options
         self._option_stack = []
         self.trace = trace
         self.openai = openai_client or OpenAI()
@@ -174,8 +180,6 @@ class ChatSession:
     @user.setter
     def user(self, content: str):
         self.trace.write_mesg(Mesg("user", content))
-
-    @property
     def last(self):
         try:
             return self.trace.history[-1].content

@@ -22,11 +22,13 @@ DEFAULT_LOG_DIR = Path("~/OAC/logs/").expanduser()
 
 class ChatApp:
     def __init__(self,
+                 project: str = "default",
                  client: Any = None,
                  cli_args: list[str] | None = None,
                  trace_dir: Path | None = None,
                  trace_name: str | None = None,
                  output_stream = None):
+        self.project = project
         self.client = client
         self.trace_dir = trace_dir
         self.trace_name = trace_name
@@ -47,6 +49,7 @@ class ChatApp:
     def create_session(self):
         options = self.get_options()
         trace = SessionTrace(
+            self.project,
             session_id=self.trace_name or datetime.now().strftime("%Y%m%d_%H%M%S"),
             options=options,  # TODO: Move logging call to here
             log_dir=self.trace_dir or DEFAULT_LOG_DIR,
